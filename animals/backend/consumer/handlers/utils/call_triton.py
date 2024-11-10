@@ -17,7 +17,19 @@ import numpy as np
 def call_triton(image_path: str = f"./cat.jpg") -> list[dict]:
     # logger.info(f"call_triton {image_path=}")
     image: np.ndarray = plt.imread(image_path)  # (h, w, c)
-    images = MODEL(image)
+    if image.ndim == 3:
+        if image.shape[2] > 3:
+            # Удаление лишних каналов (например, альфа-канала)
+            image_rgb = image[:, :, :3]
+        else:
+            image_rgb = image
+    elif image.ndim == 2:
+        # Изображение в градациях серого преобразовано в 3-канальное RGB."
+        image_rgb = np.stack((image,) * 3, axis=-1)
+    else:
+        raise ValueError("Неизвестный формат изображения.")
+
+    images = MODEL(image_rgb)
     output = []
     for image in images:
         for box in image.boxes:

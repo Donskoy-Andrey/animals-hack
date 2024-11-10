@@ -1,5 +1,6 @@
 # Основные API
 import contextlib
+import json
 import os
 from typing import Any
 from uuid import uuid4
@@ -24,9 +25,9 @@ from web.storage.rabbit import channel_pool
 from .router import router
 from .schemas import *
 from .schemas import JobMessage
+from .utils import get_stats
 from ...models.jobs import Jobs
 from ...models.jobs_images import JobsImages
-from .utils import get_stats
 
 TIME_FORMAT: str = '%Y-%m-%dT%H:%M:%S'
 ALLOWED_CONTENT_TYPES = ["image/jpeg", "image/png", "image/gif"]
@@ -46,13 +47,15 @@ async def upload_images(body: AnimalsImageResponse = Depends(),
                         images: List[UploadFile] = File(...),
                         created_at: List[str] = Form(...),
                         camera: List[str] = Form(...),
+                        size_threshold: str = Form(...),
                         session: AsyncSession = Depends(get_db)):
     # добавляем запись о задаче
     current_id = str(uuid4())
     db_job = Jobs(uid=current_id)
     session.add(db_job)
     await session.commit()
-
+    size_threshold = json.loads(size_threshold)
+    # logger.info(f"{size_threshold=}")
     os.makedirs(DIRECTORY, exist_ok=True)
 
     uploaded_files_name = []
@@ -67,6 +70,7 @@ async def upload_images(body: AnimalsImageResponse = Depends(),
             if '/' in file.filename:
                 file.filename = str(file.filename).split('/')[-1]
 
+            logger.info(f"{file.filename=}")
             path = os.path.join(DIRECTORY, f"{current_id}_hash_{file.filename}")
             # Асинхронно считываем содержимое файла
             with open(path, "wb+") as file_object:
@@ -82,13 +86,15 @@ async def upload_images(body: AnimalsImageResponse = Depends(),
         "uid": current_id,
         "body":
             {"data":
-                 {"filenames": uploaded_files_name,
-                  "datetimes": created_at_time,
-                  "cameras": valid_camera,
-                  "confidence_lvl": float(body.confidence_level)
-                  }
+                {
+                    "filenames": uploaded_files_name,
+                    "datetimes": created_at_time,
+                    "cameras": valid_camera,
+                    "threshold_width": size_threshold['width'],
+                    "threshold_height": size_threshold['height']
+                }
 
-             }
+            }
     }
     # отправляем в очередь
     await publish_message(msg)
