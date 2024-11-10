@@ -153,9 +153,10 @@ export const FilesProvider = ({ children }) => {
             total_class1_files,
             total_class2_files,
             total_files_without_objects: processedFiles.length - totalFilesNumber,
-            average_animals_per_photo: (total_class1_files + total_class2_files) / processedFiles.length,
+            average_animals_per_photo: ((total_class1_files + total_class2_files) / processedFiles.length).toFixed(2),
             total_bbox_number: total_class1_files + total_class2_files
         }
+        console.log(stats.total_files_without_objects===stats.total_files_uploaded);
         setStats(statsObj);
     }
 

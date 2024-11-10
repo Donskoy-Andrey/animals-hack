@@ -10,7 +10,7 @@ import {ConfidenceLevelInput} from "../ConfidenceLevelInput/ConfidenceLevelInput
 
 export const PhotoGallery = () => {
     const navigate = useNavigate();
-    const {processedFiles, error, confidenceLevel} = useContext(FilesContext);
+    const {processedFiles, error, confidenceLevel, stats} = useContext(FilesContext);
 
     // Состояния сортировки и фильтрации
     const [sortOption, setSortOption] = useState('name-asc');
@@ -200,7 +200,7 @@ export const PhotoGallery = () => {
 
                 {/* Отображение отфильтрованных фотографий */}
                 <div className="photo-gallery-content">
-                    {filteredPhotos.length > 0 ? (
+                    {filteredPhotos.length > 0 && stats.total_files_without_objects !== stats.total_files_uploaded ? (
                         filteredPhotos.map((photo, index) => (
                             <div className="photo-gallery-item" key={index}>
                                 <PhotoBox id={photo.filename} key={photo.id || photo.filename} processedFile={photo}/>
@@ -230,7 +230,10 @@ export const PhotoGallery = () => {
                         ))
                     ) : (
                         <div className="no-photos-container">
-                            <p className="no-photos">Загрузите фотографии</p>
+                            {processedFiles.length === 0 ? <p className="no-photos">Загрузите фотографии</p>
+                                :
+                                <p className="no-photos">Объекты не распознанны</p>
+                            }
                             <button className="btn btn-secondary" onClick={() => navigate('/')}>На главную</button>
                         </div>
                     )}
