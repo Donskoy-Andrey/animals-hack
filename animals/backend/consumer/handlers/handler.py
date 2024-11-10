@@ -8,13 +8,16 @@ from web.logger import logger
 from web.models.images import Images
 from web.models.jobs_images import JobsImages
 from web.storage.db import async_session
-from PIL import Image
+
 
 async def process_images(message: JobMessage) -> None:
     image_pathes = message["body"]["data"]["filenames"]
     datetimes = message["body"]["data"]["datetimes"]
     cameras = message["body"]["data"]["cameras"]
-    confidence_lvl = message["body"]["data"]["confidence_lvl"]
+    threshold_width = message["body"]["data"]["threshold_width"]
+    threshold_height = message["body"]["data"]["threshold_height"]
+    logger.info(f"{threshold_width=}")
+    logger.info(f"{threshold_height=}")
     image_ids = []
 
     async with async_session() as session:
@@ -39,24 +42,9 @@ async def process_images(message: JobMessage) -> None:
         #######################
         # do smth with pictures here
         #######################
+        logger.info(f"0000")
 
         for index, image_id in enumerate(image_ids):
-            logger.info(f"11111111")
-            orders = call_triton(os.path.join('/data/raw', image_pathes[index]))
-            logger.info(f"22222222")
-
-            # logger.info(f"{orders=}")
-            for order in orders:
-                # logger.info(f"{order=}")
-                left, top, right, bottom = order["xyxy"]
-                order["xyxy"] = [left, top, right - left, bottom - top]
-
-                if order["conf"] >= 0.88:
-                    order["conf"] = 1
-                else:
-                    order["conf"] = 0
-
-                logger.info(f'{order["xyxy"]}, {order["conf"]}')
 
             await session.execute(
                 update(JobsImages).
@@ -64,13 +52,38 @@ async def process_images(message: JobMessage) -> None:
                 values(status=True)
             )
 
-            res_borders = [order["xyxy"] for order in orders]
-            res_cls = [order["conf"] for order in orders]
+            logger.info(f"11111111")
+
+            orders = call_triton(os.path.join('/data/raw', image_pathes[index]))
+            logger.info(f"{orders=}")
+            for order in orders:
+                logger.info(f"{order=}")
+                left, top, right, bottom = order["xyxy"]
+                order["xyxy"] = [left, top, right - left, bottom - top]
+                logger.info(f'{order["xyxy"]}, {order["conf"]}')
+
+            res_borders = []
+            res_cls = []
+            for order in orders:
+                logger.info(f" второй цикла {order=}")
+                logger.info(f" второй цикла {threshold_width=}")
+                logger.info(f" второй цикла {threshold_height=}")
+                if float(order["xyxy"][2]) >= float(threshold_width) and float(order["xyxy"][3]) >= float(
+                        threshold_height):
+
+                    logger.info(f" Условие выполнено {order=}")
+                    res_borders.append(order["xyxy"])
+                    res_cls.append(order["conf"])
+
+            # res_borders = [order["xyxy"] for order in orders]
+            # res_cls = [order["conf"] for order in orders]
+
             # res = [
             #         {"border": order["xyxy"], "object_class": order["conf"]}
             #         {"border": [100, 200, 300, 100], "object_class": 0}
-                    # for order in orders
-                # ]
+            # for order in orders
+            # ]
+            logger.info("Пишем в базу")
             await session.execute(
                 update(Images).
                 where(Images.id == image_id).
@@ -78,11 +91,9 @@ async def process_images(message: JobMessage) -> None:
             )
             await session.commit()
 
-
             # logger.info(f"{image_pathes=}")
             # logger.info(f"{image_pathes[index]=}")
             # orders = await asyncio.to_thread(call_triton, image_pathes[index])
-
 
             # await session.execute(
             #     update(Images).
@@ -95,7 +106,6 @@ async def process_images(message: JobMessage) -> None:
             #     ])
             #
             # )
-
 
             # session.commit()
         # await session.execute(
