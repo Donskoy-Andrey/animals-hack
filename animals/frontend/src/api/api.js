@@ -11,7 +11,7 @@
 // import axios from 'axios';
 
 export const uploadFileToServer = async (formData) => {
-  const response = await fetch('http://86.104.74.159/service/api/v1/upload_images', {
+  const response = await fetch('/service/api/v1/upload_images', {
     method: 'POST',
     body: formData,
     headers: {
@@ -27,7 +27,7 @@ export const uploadFileToServer = async (formData) => {
 };
 
 export const downloadFilesFromServer = async (uid) => {
-    const response = await fetch('http://86.104.74.159/service/api/v1/get_result', {
+    const response = await fetch('/service/api/v1/get_result', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',

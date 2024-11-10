@@ -55,7 +55,7 @@ async def upload_images(body: AnimalsImageResponse = Depends(),
     session.add(db_job)
     await session.commit()
     size_threshold = json.loads(size_threshold)
-    # logger.info(f"{size_threshold=}")
+    logger.info(f"{size_threshold=}")
     os.makedirs(DIRECTORY, exist_ok=True)
 
     uploaded_files_name = []
